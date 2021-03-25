@@ -18,6 +18,8 @@ __status__ 		= "Prototype"
 
 from scapy.all import *
 from binascii import a2b_hex, b2a_hex
+from scapy.contrib.wpa_eapol import WPA_key
+from scapy.layers.eap import EAPOL
 from pbkdf2 import *
 from numpy import array_split
 from numpy import array
@@ -36,23 +38,29 @@ def customPRF512(key,A,B):
         R = R+hmacsha1.digest()
     return R[:blen]
 
+
 # Read capture file -- it contains beacon, authentication, associacion, handshake and data
-wpa=rdpcap("wpa_handshake.cap") 
+wpa = rdpcap("wpa_handshake.cap")
 
 # Important parameters for key derivation - most of them can be obtained from the pcap file
 passPhrase  = "actuelle"
 A           = "Pairwise key expansion" #this string is used in the pseudo-random function
-ssid        = "SWI"
-APmac       = a2b_hex("cebcc8fdcab7")
-Clientmac   = a2b_hex("0013efd015bd")
+ssid        = wpa[3].info.decode('ascii')
+APmac       = a2b_hex(wpa[3].addr1.replace(':', ''))
+Clientmac   = a2b_hex(wpa[3].addr2.replace(':', ''))
+
+EAPOL_ANONCE = 138	    # EAPOL-Key1(ANonce)
+EAPOL_SNONCE_MIC = 266	# EAPOL-Key2(SNonce+MIC)
+EAPOL_GTK_MIC = 5066	# EAPOL-Key3(GTK+MIC)
+EAPOL_ACK = 778		    # EAPOL-Key4(ACK)
 
 # Authenticator and Supplicant Nonces
-ANonce      = a2b_hex("90773b9a9661fee1f406e8989c912b45b029c652224e8b561417672ca7e0fd91")
-SNonce      = a2b_hex("7b3826876d14ff301aee7c1072b5e9091e21169841bce9ae8a3f24628f264577")
+ANonce      = wpa[5].getlayer(WPA_key).nonce # 6
+SNonce      = wpa[6].load[13:45]  # 7b3826876d14ff301aee7c1072b5e9091e21169841bce9ae8a3f24628f264577
 
 # This is the MIC contained in the 4th frame of the 4-way handshake
 # When attacking WPA, we would compare it to our own MIC calculated using passphrases from a dictionary
-mic_to_test = "36eef66540fa801ceee2fea9b7929b40"
+mic_to_test = wpa[8].load[-18:-2]
 
 B           = min(APmac,Clientmac)+max(APmac,Clientmac)+min(ANonce,SNonce)+max(ANonce,SNonce) #used in pseudo-random function
 
