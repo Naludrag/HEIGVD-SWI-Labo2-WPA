@@ -56,11 +56,13 @@ EAPOL_ACK = 778		    # EAPOL-Key4(ACK)
 
 # Authenticator and Supplicant Nonces
 ANonce      = wpa[5].getlayer(WPA_key).nonce # 6
-SNonce      = wpa[6].load[13:45]  # 7b3826876d14ff301aee7c1072b5e9091e21169841bce9ae8a3f24628f264577
+# TODO : Didn't work in my case without the raw message
+SNonce      = raw(wpa[6])[65:97]  # 7b3826876d14ff301aee7c1072b5e9091e21169841bce9ae8a3f24628f264577
 
 # This is the MIC contained in the 4th frame of the 4-way handshake
 # When attacking WPA, we would compare it to our own MIC calculated using passphrases from a dictionary
-mic_to_test = wpa[8].load[-18:-2]
+raw = raw(wpa[8])
+mic_to_test = raw[-18:-2].hex()
 
 B           = min(APmac,Clientmac)+max(APmac,Clientmac)+min(ANonce,SNonce)+max(ANonce,SNonce) #used in pseudo-random function
 
