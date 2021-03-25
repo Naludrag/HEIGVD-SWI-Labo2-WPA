@@ -18,7 +18,6 @@ __status__ 		= "Prototype"
 
 from scapy.all import *
 from binascii import a2b_hex, b2a_hex
-from pbkdf2_math import pbkdf2_hex
 from pbkdf2 import *
 from numpy import array_split
 from numpy import array
