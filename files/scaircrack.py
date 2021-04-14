@@ -13,55 +13,59 @@ __status__ = "Prototype"
 
 from wpa_key_derivation import *
 
-# Read capture file -- it contains beacon, authentication, association, handshake and data
-wpa = rdpcap("wpa_handshake.cap")
+def main():
+    # Read capture file -- it contains beacon, authentication, association, handshake and data
+    wpa = rdpcap("wpa_handshake.cap")
 
-A = "Pairwise key expansion"  # This string is used in the pseudo-random function
-# Important parameters for key derivation - most of them can be obtained from the pcap file
-ssid, APmac, Clientmac = getAssociationRequestInfo(wpa)
-ANonce, SNonce, mic_to_test, data = getHandshakeInfo(wpa)
+    A = "Pairwise key expansion"  # This string is used in the pseudo-random function
+    # Important parameters for key derivation - most of them can be obtained from the pcap file
+    ssid, APmac, Clientmac = getAssociationRequestInfo(wpa)
+    ANonce, SNonce, mic_to_test, data = getHandshakeInfo(wpa)
 
-B = min(APmac, Clientmac) + max(APmac, Clientmac) + min(ANonce, SNonce) + max(ANonce,
-                                                                              SNonce)  # Used in pseudo-random function
-# Show the values obtained of the pcap file
-print("\n\nValues used to derivate keys")
-print("============================")
-print("SSID: ", ssid, "\n")
-print("AP Mac: ", b2a_hex(APmac), "\n")
-print("CLient Mac: ", b2a_hex(Clientmac), "\n")
-print("AP Nonce: ", b2a_hex(ANonce), "\n")
-print("Client Nonce: ", b2a_hex(SNonce), "\n")
+    B = min(APmac, Clientmac) + max(APmac, Clientmac) + min(ANonce, SNonce) + max(ANonce,
+                                                                                  SNonce)  # Used in pseudo-random function
+    # Show the values obtained of the pcap file
+    print("\n\nValues used to derivate keys")
+    print("============================")
+    print("SSID: ", ssid, "\n")
+    print("AP Mac: ", b2a_hex(APmac), "\n")
+    print("CLient Mac: ", b2a_hex(Clientmac), "\n")
+    print("AP Nonce: ", b2a_hex(ANonce), "\n")
+    print("Client Nonce: ", b2a_hex(SNonce), "\n")
 
 
-print("\n\nTrying to find passphrase")
-print("============================")
-# Read from the wordlist
-f = open('./wordlist.txt', 'r')
-# Read each line of the file. The line read will be the passphrase to test
-for passPhrase in f.read().splitlines():
-    # Encode the passphrase and the ssid as bytes
-    passPhrase = str.encode(passPhrase)
-    ssid_encoded = str.encode(ssid)
-    # Calculate 4096 rounds to obtain the 256 bit (32 oct) PMK with the passphrase to test
-    pmk = pbkdf2(hashlib.sha1, passPhrase, ssid_encoded, 4096, 32)
+    print("\n\nTrying to find passphrase")
+    print("============================")
+    # Read from the wordlist
+    f = open('./wordlist.txt', 'r')
+    # Read each line of the file. The line read will be the passphrase to test
+    for passPhrase in f.read().splitlines():
+        # Encode the passphrase and the ssid as bytes
+        passPhrase = str.encode(passPhrase)
+        ssid_encoded = str.encode(ssid)
+        # Calculate 4096 rounds to obtain the 256 bit (32 oct) PMK with the passphrase to test
+        pmk = pbkdf2(hashlib.sha1, passPhrase, ssid_encoded, 4096, 32)
 
-    # Expand pmk to obtain PTK
-    ptk = customPRF512(pmk, str.encode(A), B)
+        # Expand pmk to obtain PTK
+        ptk = customPRF512(pmk, str.encode(A), B)
 
-    # Calculate MIC over EAPOL payload (Michael)- The ptk is, in fact, KCK|KEK|TK|MICK
-    mic = hmac.new(ptk[0:16], data, hashlib.sha1)
+        # Calculate MIC over EAPOL payload (Michael)- The ptk is, in fact, KCK|KEK|TK|MICK
+        mic = hmac.new(ptk[0:16], data, hashlib.sha1)
 
-    # Remove the last 4 bytes of the mic calculated because it will contain the ICV
-    if mic.digest()[:-4] == mic_to_test:
-        print("\nResults of the key expansion")
-        print("=============================")
-        print("Passphrase:\t\t", passPhrase, "\n")
-        print("PMK:\t\t", pmk.hex(), "\n")
-        print("PTK:\t\t", ptk.hex(), "\n")
-        print("KCK:\t\t", ptk[0:16].hex(), "\n")
-        print("KEK:\t\t", ptk[16:32].hex(), "\n")
-        print("TK: \t\t", ptk[32:48].hex(), "\n")
-        print("MICK:\t\t", ptk[48:64].hex(), "\n")
-        print("MIC:\t\t", mic.hexdigest(), "\n")
-        break
-    print("No result with passphrase:\t\t", passPhrase, "\n")
+        # Remove the last 4 bytes of the mic calculated because it will contain the ICV
+        if mic.digest()[:-4] == mic_to_test:
+            print("\nResults of the key expansion")
+            print("=============================")
+            print("Passphrase:\t\t", passPhrase, "\n")
+            print("PMK:\t\t", pmk.hex(), "\n")
+            print("PTK:\t\t", ptk.hex(), "\n")
+            print("KCK:\t\t", ptk[0:16].hex(), "\n")
+            print("KEK:\t\t", ptk[16:32].hex(), "\n")
+            print("TK: \t\t", ptk[32:48].hex(), "\n")
+            print("MICK:\t\t", ptk[48:64].hex(), "\n")
+            print("MIC:\t\t", mic.hexdigest(), "\n")
+            break
+        print("No result with passphrase:\t\t", passPhrase, "\n")
+
+if __name__ == "__main__":
+    main()

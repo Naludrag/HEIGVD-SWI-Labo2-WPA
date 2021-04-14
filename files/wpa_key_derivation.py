@@ -91,45 +91,48 @@ def getHandshakeInfo(packets):
 
     return ANonce, SNonce, mic, data
 
+def main():
+    # Read capture file -- it contains beacon, authentication, association, handshake and data
+    wpa = rdpcap("wpa_handshake.cap")
 
-# Read capture file -- it contains beacon, authentication, association, handshake and data
-wpa = rdpcap("wpa_handshake.cap")
+    # Important parameters for key derivation - most of them can be obtained from the pcap file
+    passPhrase = "actuelle"
+    A = "Pairwise key expansion"  # this string is used in the pseudo-random function
 
-# Important parameters for key derivation - most of them can be obtained from the pcap file
-passPhrase = "actuelle"
-A = "Pairwise key expansion"  # this string is used in the pseudo-random function
+    ssid, APmac, Clientmac = getAssociationRequestInfo(wpa)
+    ANonce, SNonce, mic_to_test, data = getHandshakeInfo(wpa)
 
-ssid, APmac, Clientmac = getAssociationRequestInfo(wpa)
-ANonce, SNonce, mic_to_test, data = getHandshakeInfo(wpa)
+    B = min(APmac, Clientmac) + max(APmac, Clientmac) + min(ANonce, SNonce) + max(ANonce,
+                                                                                  SNonce)  # used in pseudo-random function
+    print("\n\nValues used to derivate keys")
+    print("============================")
+    print("Passphrase: ", passPhrase, "\n")
+    print("SSID: ", ssid, "\n")
+    print("AP Mac: ", b2a_hex(APmac), "\n")
+    print("CLient Mac: ", b2a_hex(Clientmac), "\n")
+    print("AP Nonce: ", b2a_hex(ANonce), "\n")
+    print("Client Nonce: ", b2a_hex(SNonce), "\n")
 
-B = min(APmac, Clientmac) + max(APmac, Clientmac) + min(ANonce, SNonce) + max(ANonce,
-                                                                              SNonce)  # used in pseudo-random function
-print("\n\nValues used to derivate keys")
-print("============================")
-print("Passphrase: ", passPhrase, "\n")
-print("SSID: ", ssid, "\n")
-print("AP Mac: ", b2a_hex(APmac), "\n")
-print("CLient Mac: ", b2a_hex(Clientmac), "\n")
-print("AP Nonce: ", b2a_hex(ANonce), "\n")
-print("Client Nonce: ", b2a_hex(SNonce), "\n")
+    # calculate 4096 rounds to obtain the 256 bit (32 oct) PMK
+    passPhrase = str.encode(passPhrase)
+    ssid = str.encode(ssid)
+    pmk = pbkdf2(hashlib.sha1, passPhrase, ssid, 4096, 32)
 
-# calculate 4096 rounds to obtain the 256 bit (32 oct) PMK
-passPhrase = str.encode(passPhrase)
-ssid = str.encode(ssid)
-pmk = pbkdf2(hashlib.sha1, passPhrase, ssid, 4096, 32)
+    # expand pmk to obtain PTK
+    ptk = customPRF512(pmk, str.encode(A), B)
 
-# expand pmk to obtain PTK
-ptk = customPRF512(pmk, str.encode(A), B)
+    # calculate MIC over EAPOL payload (Michael)- The ptk is, in fact, KCK|KEK|TK|MICK
+    mic = hmac.new(ptk[0:16], data, hashlib.sha1)
 
-# calculate MIC over EAPOL payload (Michael)- The ptk is, in fact, KCK|KEK|TK|MICK
-mic = hmac.new(ptk[0:16], data, hashlib.sha1)
+    print("\nResults of the key expansion")
+    print("=============================")
+    print("PMK:\t\t", pmk.hex(), "\n")
+    print("PTK:\t\t", ptk.hex(), "\n")
+    print("KCK:\t\t", ptk[0:16].hex(), "\n")
+    print("KEK:\t\t", ptk[16:32].hex(), "\n")
+    print("TK: \t\t", ptk[32:48].hex(), "\n")
+    print("MICK:\t\t", ptk[48:64].hex(), "\n")
+    print("MIC:\t\t", mic.hexdigest(), "\n")
 
-print("\nResults of the key expansion")
-print("=============================")
-print("PMK:\t\t", pmk.hex(), "\n")
-print("PTK:\t\t", ptk.hex(), "\n")
-print("KCK:\t\t", ptk[0:16].hex(), "\n")
-print("KEK:\t\t", ptk[16:32].hex(), "\n")
-print("TK: \t\t", ptk[32:48].hex(), "\n")
-print("MICK:\t\t", ptk[48:64].hex(), "\n")
-print("MIC:\t\t", mic.hexdigest(), "\n")
+if __name__ == "__main__":
+    main()
