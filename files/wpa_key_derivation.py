@@ -100,6 +100,7 @@ def main():
     passPhrase = "actuelle"
     A = "Pairwise key expansion"  # this string is used in the pseudo-random function
 
+    # Important parameters for key derivation - most of them can be obtained from the pcap file
     ssid, APmac, Clientmac = getAssociationRequestInfo(wpa)
     ANonce, SNonce, mic_to_test, data = getHandshakeInfo(wpa)
 

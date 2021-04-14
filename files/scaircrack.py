@@ -33,7 +33,6 @@ def main():
     print("AP Nonce: ", b2a_hex(ANonce), "\n")
     print("Client Nonce: ", b2a_hex(SNonce), "\n")
 
-
     print("\nTrying to find passphrase")
     print("============================")
     # Read from the wordlist
