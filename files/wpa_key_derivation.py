@@ -42,8 +42,8 @@ def customPRF512(key, A, B):
 
 def getAssociationRequestInfo(packets):
     """
-    Will get all the values useful from an association request packet
-    :param packets: the list of packets
+    Will get all the useful values from an association request packet
+    :param packets: the list of packets to analyse
     :return: the ssid of the AP, the MAC of the AP and the Client
     """
     # Search for an association request in the list of packets
@@ -65,7 +65,7 @@ def getAssociationRequestInfo(packets):
 
 def getHandshakeInfo(packets):
     """
-    Will get all the values useful from the 4 way handshake packets.
+    Will get all useful values from the 4 way handshake packets.
     Handshake packets must be in order.
     :param packets: the list of packets
     :return: the authenticator nonce, the supplicant nonce, the mic of the fourth message and the data of the fourth message
@@ -85,7 +85,7 @@ def getHandshakeInfo(packets):
     # When attacking WPA, we would compare it to our own MIC calculated using passphrases from a dictionary
     mic = handshakePkts[3].wpa_key_mic  # mic in fourth message of the handshake
 
-    handshakePkts[3].wpa_key_mic = 0  # Zero the mic key to remove the value from the data
+    handshakePkts[3].wpa_key_mic = 0  # Zero the mic key to remove its value from the data
     # Get the data of the last packet without the mic
     data = bytes(handshakePkts[3].underlayer)
 
