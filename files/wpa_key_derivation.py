@@ -25,6 +25,11 @@ from scapy.layers.dot11 import *
 from pbkdf2 import *
 import hmac, hashlib
 
+"""
+To make this script work, scappy 2.4.3 needs to be installed with the command : pip install scapy==2.4.3
+We decided to use this version because it offers a clean way to go through packets that were removed 
+in the latest versions.
+"""
 
 def customPRF512(key, A, B):
     """

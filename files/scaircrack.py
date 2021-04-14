@@ -13,6 +13,11 @@ __status__ = "Prototype"
 
 from wpa_key_derivation import *
 
+"""
+To make this script work, scappy 2.4.3 needs to be installed with the command : pip install scapy==2.4.3
+We decided to use this version because it offers a clean way to go through packets that were removed 
+in the latest versions.
+"""
 def main():
     # Read capture file -- it contains beacon, authentication, association, handshake and data
     wpa = rdpcap("wpa_handshake.cap")
