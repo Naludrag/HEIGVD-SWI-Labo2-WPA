@@ -82,10 +82,11 @@ def getHandshakeInfo(packets):
     SNonce = handshakePkts[1].nonce  # SNonce in second message of the handshake
 
     # This is the MIC contained in the 4th frame of the 4-way handshake
-    # When attacking WPA, we would compare it to our own MIC calculated using passphrases from a dictionary
+    # When attacking WPA, we would compare it to our own MIC calculated
+    # using passphrases from a dictionary c.f scaircrack.py
     mic = handshakePkts[3].wpa_key_mic  # mic in fourth message of the handshake
 
-    handshakePkts[3].wpa_key_mic = 0  # Zero the mic key to remove its value from the data
+    handshakePkts[3].wpa_key_mic = 0  # Make the mic key value to zero to remove its value from the data
     # Get the data of the last packet without the mic
     data = bytes(handshakePkts[3].underlayer)
 
