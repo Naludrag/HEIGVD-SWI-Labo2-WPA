@@ -52,7 +52,8 @@ def main():
         # Calculate MIC over EAPOL payload (Michael)- The ptk is, in fact, KCK|KEK|TK|MICK
         mic = hmac.new(ptk[0:16], data, hashlib.sha1)
 
-        # Remove the last 4 bytes of the mic calculated because it will contain the ICV
+        # Remove the last 4 bytes of the mic calculated because SHA-1 return a 20 bytes output
+        # and mic is only 16 bytes long
         if mic.digest()[:-4] == mic_to_test:
             print("Found valid passphrase:\t\t\t", passPhrase)
             print("\nResults of the key expansion")
