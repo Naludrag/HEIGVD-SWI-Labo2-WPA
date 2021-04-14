@@ -10,7 +10,7 @@
 
 **Auteurs: Robin Müller, Stéphane Teixeira Carvalho**
 
-__Nous avons du utiliser scapy 2.4.3 pour pouvoir lire les packets d'une manière que nous trouvons plus propre.__
+__Nous avons dû utiliser scapy 2.4.3 pour pouvoir lire les packets d'une manière que nous trouvons plus propre.__
 
 __Pour pouvoir lancer nos scripts il faut donc l'installer en lançant la commande : ```pip install scapy==2.4.3```__
 
