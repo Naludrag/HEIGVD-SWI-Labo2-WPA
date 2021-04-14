@@ -32,6 +32,9 @@ print("CLient Mac: ", b2a_hex(Clientmac), "\n")
 print("AP Nonce: ", b2a_hex(ANonce), "\n")
 print("Client Nonce: ", b2a_hex(SNonce), "\n")
 
+
+print("\n\nTrying to find passphrase")
+print("============================")
 # Read from the wordlist
 f = open('./wordlist.txt', 'r')
 # Read each line of the file. The line read will be the passphrase to test
@@ -61,3 +64,4 @@ for passPhrase in f.read().splitlines():
         print("MICK:\t\t", ptk[48:64].hex(), "\n")
         print("MIC:\t\t", mic.hexdigest(), "\n")
         break
+    print("No result with passphrase:\t\t", passPhrase, "\n")
