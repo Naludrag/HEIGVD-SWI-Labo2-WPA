@@ -54,6 +54,7 @@ def main():
 
         # Remove the last 4 bytes of the mic calculated because it will contain the ICV
         if mic.digest()[:-4] == mic_to_test:
+            print("Found valid passphrase:\t\t\t", passPhrase)
             print("\nResults of the key expansion")
             print("=============================")
             print("Passphrase:\t\t", passPhrase, "\n")
