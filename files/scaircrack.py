@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Found the passphrase of a AP using WPA
+Found the passphrase of an AP using WPA
 """
 
 __author__ = "Robin Müller et Stéphane Teixeira Carvalho"
@@ -23,6 +23,7 @@ ANonce, SNonce, mic_to_test, data = getHandshakeInfo(wpa)
 
 B = min(APmac, Clientmac) + max(APmac, Clientmac) + min(ANonce, SNonce) + max(ANonce,
                                                                               SNonce)  # Used in pseudo-random function
+# Show the values obtained of the pcap file
 print("\n\nValues used to derivate keys")
 print("============================")
 print("SSID: ", ssid, "\n")
@@ -33,12 +34,12 @@ print("Client Nonce: ", b2a_hex(SNonce), "\n")
 
 # Read from the wordlist
 f = open('./wordlist.txt', 'r')
-# Read each line of the file will. The line will be the passphrase to test
+# Read each line of the file. The line read will be the passphrase to test
 for passPhrase in f.read().splitlines():
     # Encode the passphrase and the ssid as bytes
     passPhrase = str.encode(passPhrase)
     ssid_encoded = str.encode(ssid)
-    # Calculate 4096 rounds to obtain the 256 bit (32 oct) PMK
+    # Calculate 4096 rounds to obtain the 256 bit (32 oct) PMK with the passphrase to test
     pmk = pbkdf2(hashlib.sha1, passPhrase, ssid_encoded, 4096, 32)
 
     # Expand pmk to obtain PTK

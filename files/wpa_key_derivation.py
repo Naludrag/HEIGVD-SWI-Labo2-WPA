@@ -52,12 +52,13 @@ def getAssociationRequestInfo(packets):
     if len(assocRequests) == 0:
         raise Exception("Cannot find association request")
 
-    # Retrieve info from the first association request
+    # Retrieve info from the first association request found
     pkt = assocRequests[0]
-    # info will give the ssid
+    # info will give the ssid of the AP
     ssid = pkt.info.decode('ascii')
     # addr1 is where the MAC of the AP is stored in the first association request in our case
     APmac = a2b_hex(pkt.addr1.replace(':', ''))
+    # addr2 is where the MAC of the client is stored in the first association request in our case
     Clientmac = a2b_hex(pkt.addr2.replace(':', ''))
     return ssid, APmac, Clientmac
 
@@ -73,7 +74,7 @@ def getHandshakeInfo(packets):
     pkts = list(filter(lambda pkt: pkt.haslayer(WPA_key), packets))
     if len(pkts) != 4:
         raise Exception("Invalid handshake")
-    # Get the WPA_layer of the packets found
+    # Get the WPA_layer of the packets found contains the value of the handshake
     handshakePkts = list(map(lambda pkt: pkt.getlayer(WPA_key), pkts))
 
     # Authenticator and Supplicant Nonces
@@ -85,6 +86,7 @@ def getHandshakeInfo(packets):
     mic = handshakePkts[3].wpa_key_mic  # mic in fourth message of the handshake
 
     handshakePkts[3].wpa_key_mic = 0  # Zero the mic key to remove the value from the data
+    # Get the data of the last packet without the mic
     data = bytes(handshakePkts[3].underlayer)
 
     return ANonce, SNonce, mic, data
